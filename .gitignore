@@ -1,3 +1,8 @@
+# Foundry build artifacts
+cache/
+out/
+broadcast/
+
 # Remix compiler artifacts
 **/artifacts/
 **/artifacts/**
