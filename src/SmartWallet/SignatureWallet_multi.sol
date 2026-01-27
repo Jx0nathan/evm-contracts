@@ -131,7 +131,7 @@ contract SignatureWallet_multi is IAccount {
                            IAccount 接口实现
     //////////////////////////////////////////////////////////////*/
 
-    /**
+    /** 
      * @notice 验证 UserOperation 的签名
      * @param userOp 用户操作
      * @param userOpHash 用户操作的哈希（由 EntryPoint 计算）
@@ -202,6 +202,7 @@ contract SignatureWallet_multi is IAccount {
      * @param _index 签名者索引
      */
     function addSigner(address _signer, uint8 _index) external onlySelf {
+        // signers hash对的默认值是 address(0), 所以如果值等于 address(0)
         if (signers[_index] != address(0)) revert SignerAlreadyExists();
 
         signers[_index] = _signer;
