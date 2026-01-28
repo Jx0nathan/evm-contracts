@@ -32,12 +32,6 @@ contract WalletFactory {
     event WalletCreated(address indexed wallet, address indexed owner, bytes32 salt);
 
     /*//////////////////////////////////////////////////////////////
-                                 错误定义
-    //////////////////////////////////////////////////////////////*/
-
-    error WalletAlreadyExists();
-
-    /*//////////////////////////////////////////////////////////////
                                  构造函数
     //////////////////////////////////////////////////////////////*/
 
@@ -64,11 +58,7 @@ contract WalletFactory {
         uint8 threshold,
         bytes32 salt
     ) external returns (address wallet) {
-        // 构建初始化数据
-        bytes memory initData = abi.encodeCall(
-            SignatureWallet_multi_v2.initialize,
-            (owner, signers, threshold)
-        );
+        bytes memory initData = _buildInitData(owner, signers, threshold);
 
         // 使用 CREATE2 部署 ERC1967 代理
         wallet = address(
@@ -92,11 +82,78 @@ contract WalletFactory {
         uint8 threshold,
         bytes32 salt
     ) external view returns (address) {
-        // 构建初始化数据
-        bytes memory initData = abi.encodeCall(
+        return _getAddress(owner, signers, threshold, salt);
+    }
+
+    /**
+     * @notice 创建钱包（如果不存在）
+     * @dev 如果钱包已存在，直接返回地址而不报错
+     * @param owner 钱包所有者
+     * @param signers 初始签名者列表
+     * @param threshold 签名阈值
+     * @param salt 用于 CREATE2 的 salt
+     * @return wallet 钱包地址
+     */
+    function createWalletIfNotExists(
+        address owner,
+        address[] calldata signers,
+        uint8 threshold,
+        bytes32 salt
+    ) external returns (address wallet) {
+        wallet = _getAddress(owner, signers, threshold, salt);
+
+        // 如果地址已有代码，说明钱包已存在
+        if (wallet.code.length > 0) {
+            return wallet;
+        }
+
+        bytes memory initData = _buildInitData(owner, signers, threshold);
+
+        // 使用 CREATE2 部署
+        wallet = address(
+            new ERC1967Proxy{salt: salt}(implementation, initData)
+        );
+
+        emit WalletCreated(wallet, owner, salt);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              内部函数
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice 构建初始化数据
+     * @param owner 钱包所有者
+     * @param signers 签名者列表
+     * @param threshold 签名阈值
+     * @return 编码后的初始化数据
+     */
+    function _buildInitData(
+        address owner,
+        address[] calldata signers,
+        uint8 threshold
+    ) internal pure returns (bytes memory) {
+        return abi.encodeCall(
             SignatureWallet_multi_v2.initialize,
             (owner, signers, threshold)
         );
+    }
+
+    /**
+     * @notice 内部计算钱包地址
+     * @param owner 钱包所有者
+     * @param signers 签名者列表
+     * @param threshold 签名阈值
+     * @param salt 用于 CREATE2 的 salt
+     * @return 预计算的钱包地址
+     */
+    function _getAddress(
+        address owner,
+        address[] calldata signers,
+        uint8 threshold,
+        bytes32 salt
+    ) internal view returns (address) {
+        bytes memory initData = _buildInitData(owner, signers, threshold);
 
         // 构建代理合约的创建字节码
         bytes memory proxyBytecode = abi.encodePacked(
@@ -115,41 +172,5 @@ contract WalletFactory {
         );
 
         return address(uint160(uint256(hash)));
-    }
-
-    /**
-     * @notice 创建钱包（如果不存在）
-     * @dev 如果钱包已存在，直接返回地址而不报错
-     * @param owner 钱包所有者
-     * @param signers 初始签名者列表
-     * @param threshold 签名阈值
-     * @param salt 用于 CREATE2 的 salt
-     * @return wallet 钱包地址
-     */
-    function createWalletIfNotExists(
-        address owner,
-        address[] calldata signers,
-        uint8 threshold,
-        bytes32 salt
-    ) external returns (address wallet) {
-        wallet = this.getAddress(owner, signers, threshold, salt);
-
-        // 如果地址已有代码，说明钱包已存在
-        if (wallet.code.length > 0) {
-            return wallet;
-        }
-
-        // 构建初始化数据
-        bytes memory initData = abi.encodeCall(
-            SignatureWallet_multi_v2.initialize,
-            (owner, signers, threshold)
-        );
-
-        // 使用 CREATE2 部署
-        wallet = address(
-            new ERC1967Proxy{salt: salt}(implementation, initData)
-        );
-
-        emit WalletCreated(wallet, owner, salt);
     }
 }
