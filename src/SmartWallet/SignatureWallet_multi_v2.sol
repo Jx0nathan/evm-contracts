@@ -64,7 +64,6 @@ contract SignatureWallet_multi_v2 is IAccount, Initializable, UUPSUpgradeable {
     /*//////////////////////////////////////////////////////////////
                                  错误定义
     //////////////////////////////////////////////////////////////*/
-
     error OnlyEntryPoint();
     error OnlyOwner();
     error OnlySelf();
@@ -77,7 +76,6 @@ contract SignatureWallet_multi_v2 is IAccount, Initializable, UUPSUpgradeable {
     /*//////////////////////////////////////////////////////////////
                                  事件
     //////////////////////////////////////////////////////////////*/
-
     event SignerAdded(uint8 indexed index, address indexed signer);
     event SignerRemoved(uint8 indexed index, address indexed signer);
     event ThresholdUpdated(uint8 newThreshold);
@@ -264,6 +262,7 @@ contract SignatureWallet_multi_v2 is IAccount, Initializable, UUPSUpgradeable {
      */
     function _authorizeUpgrade(address newImplementation) internal view override {
         (newImplementation); // 消除未使用参数警告
+        // 风险点就在于: owner私钥泄露后，攻击者可以单独将合约升级到恶意实现，绕过多签机制，转走所有资产
         if (msg.sender != owner) revert OnlyOwner();
     }
 

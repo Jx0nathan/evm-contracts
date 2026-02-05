@@ -92,13 +92,14 @@ contract SignatureWallet_v1  {
         PackedUserOperation calldata userOp,
         bytes32 userOpHash,
         uint256 missingAccountFunds
-    ) external returns (uint256 validationData) {
+    ) external onlyEntryPoint returns (uint256 validationData) {
          
         // 1. 验证签名
         validationData = _validateSignature(userOpHash, userOp.signature);
 
         // 2. 预付 gas 费给 EntryPoint
         if (missingAccountFunds > 0) {
+            //  Account 合约从自己的余额中，取出 missingAccountFunds 数量的 ETH，发送给 EntryPoint
             (bool success,) = payable(msg.sender).call{value: missingAccountFunds}("");
             // 忽略失败，EntryPoint 会处理
             (success);
